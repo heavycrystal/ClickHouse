@@ -720,16 +720,15 @@ void DatabaseAtomic::renameDatabase(ContextPtr query_context, const String & new
     waitDatabaseStarted();
     std::lock_guard lock(mutex);
 
+    for (auto & table : tables)
+        checkTableNameLengthUnlocked(new_name, table.first, getContext());
+
     bool check_ref_deps = query_context->getSettingsRef()[Setting::check_referential_table_dependencies];
     bool check_loading_deps = !check_ref_deps && query_context->getSettingsRef()[Setting::check_table_dependencies];
     if (check_ref_deps || check_loading_deps)
     {
         for (auto & table : tables)
-        {
-            checkTableNameLengthUnlocked(new_name, table.first, getContext());
-
             DatabaseCatalog::instance().checkTableCanBeRemovedOrRenamed({database_name, table.first}, check_ref_deps, check_loading_deps);
-        }
     }
 
 

@@ -18,6 +18,7 @@
 #include <Common/ZooKeeper/KeeperException.h>
 #include <Common/ZooKeeper/ZooKeeper.h>
 #include <Common/ZooKeeper/ZooKeeperCommon.h>
+#include <Common/checkFileNameLength.h>
 #include <Common/escapeForFileName.h>
 #include <Common/logger_useful.h>
 
@@ -72,6 +73,9 @@ public:
     virtual bool isReplicated() const = 0;
 
     virtual bool waitUpdate(size_t /* timeout */) { return false; }
+
+    /// Check that the file name doesn't exceed filesystem limits. No-op by default (e.g. for ZooKeeper).
+    virtual void checkNameLength(const std::string & /*file_name*/) const {}
 };
 
 
@@ -178,6 +182,12 @@ public:
     bool removeIfExists(const std::string & file_name) override
     {
         return fs::remove(getPath(file_name));
+    }
+
+    void checkNameLength(const std::string & file_name) const override
+    {
+        if (fs::exists(root_path))
+            checkFileNameLength(file_name, root_path, "named collection");
     }
 
 protected:
@@ -501,6 +511,7 @@ NamedCollectionsMap NamedCollectionsMetadataStorage::getAll() const
 
 MutableNamedCollectionPtr NamedCollectionsMetadataStorage::create(const ASTCreateNamedCollectionQuery & create_query)
 {
+    storage->checkNameLength(getFileName(create_query.collection_name));
     auto collection_ptr = NamedCollectionFromSQL::create(create_query);
     writeCreateQuery(create_query.collection_name, collection_ptr->getCreateStatement(true));
     return collection_ptr;

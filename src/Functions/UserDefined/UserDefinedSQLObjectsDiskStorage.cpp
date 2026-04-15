@@ -5,6 +5,7 @@
 
 #include <Common/StringUtils.h>
 #include <Common/atomicRename.h>
+#include <Common/checkFileNameLength.h>
 #include <Common/escapeForFileName.h>
 #include <Common/logger_useful.h>
 #include <Common/quoteString.h>
@@ -197,6 +198,8 @@ bool UserDefinedSQLObjectsDiskStorage::storeObjectImpl(
 {
     createDirectory();
     String file_path = getFilePath(object_type, object_name);
+    String file_name = fs::path(file_path).filename();
+    checkFileNameLength(file_name, dir_path, "user-defined function");
     LOG_DEBUG(log, "Storing user-defined object {} to file {}", backQuote(object_name), file_path);
 
     if (fs::exists(file_path))

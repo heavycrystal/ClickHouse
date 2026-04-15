@@ -141,13 +141,19 @@ BlockIO InterpreterRenameQuery::executeToTables(const ASTRenameQuery & rename, c
 
         if (exchange_tables)
         {
+            auto from_db = database_catalog.getDatabase(elem.from_database_name);
+            auto to_db = database_catalog.getDatabase(elem.to_database_name);
+            from_db->checkTableNameLength(to_table_id.table_name);
+            to_db->checkTableNameLength(from_table_id.table_name);
+
             DatabaseCatalog::instance().checkTablesCanBeExchangedWithNoCyclicDependencies(from_table_id, to_table_id);
             std::tie(from_ref_dependencies, from_loading_dependencies, from_mv_dependencies) = database_catalog.removeDependencies(from_table_id, false, false, false, /*mv*/ true);
             std::tie(to_ref_dependencies, to_loading_dependencies, to_mv_dependencies) = database_catalog.removeDependencies(to_table_id, false, false, false, /*mv*/ true);
         }
         else
         {
-            database->checkTableNameLength(to_table_id.table_name);
+            auto to_database = database_catalog.getDatabase(elem.to_database_name);
+            to_database->checkTableNameLength(to_table_id.table_name);
 
             DatabaseCatalog::instance().checkTableCanBeRenamedWithNoCyclicDependencies(from_table_id, to_table_id);
             bool check_ref_deps = getContext()->getSettingsRef()[Setting::check_referential_table_dependencies];
